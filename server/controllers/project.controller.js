@@ -58,7 +58,7 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await Project.findByIdAndRemove(id);
+    const data = await Project.findByIdAndDelete(id);
     
     if (!data) {
       return res.status(404).json({ message: `Cannot delete project with id=${id}. Project was not found!` });

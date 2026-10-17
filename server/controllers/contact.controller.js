@@ -26,6 +26,9 @@ exports.findOne = async (req, res) => {
 // Create a new contact
 exports.create = async (req, res) => {
   try {
+    console.log(req.body);
+    console.log(req);
+
     if (!req.body.firstname || !req.body.lastname || !req.body.email) {
       return res.status(400).json({ message: 'First name, last name, and email cannot be empty!' });
     }
@@ -66,13 +69,14 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await Contact.findByIdAndRemove(id);
+    const data = await Contact.findByIdAndDelete(id);
     
     if (!data) {
       return res.status(404).json({ message: `Cannot delete contact with id=${id}. Contact was not found!` });
     }
     res.status(200).json({ message: 'Contact was deleted successfully!' });
   } catch (error) {
+    console.log(error)
     res.status(500).json({ message: `Could not delete contact with id=${req.params.id}` });
   }
 };

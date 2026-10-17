@@ -58,7 +58,7 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await Education.findByIdAndRemove(id);
+    const data = await Education.findByIdAndDelete(id);
     
     if (!data) {
       return res.status(404).json({ message: `Cannot delete education with id=${id}. Record was not found!` });
