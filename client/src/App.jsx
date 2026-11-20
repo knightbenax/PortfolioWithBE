@@ -353,16 +353,20 @@ function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
+  const [values, setValues] = useState({ firstName: '', lastName: '', phone: '', email: '', message: '' });
+
+  function updateValue(event) {
+    setValues((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
     setSending(true);
     setError('');
     try {
       await api('/contacts', { method: 'POST', body: {
-        firstname: form.get('firstName'), lastname: form.get('lastName'),
-        phone: form.get('phone'), email: form.get('email'), message: form.get('message')
+        firstname: values.firstName, lastname: values.lastName,
+        phone: values.phone, email: values.email, message: values.message
       }});
       setSubmitted(true);
     } catch (err) {
@@ -374,6 +378,7 @@ function Contact() {
 
   function resetForm() {
     setSubmitted(false);
+    setValues({ firstName: '', lastName: '', phone: '', email: '', message: '' });
   }
 
   return (
@@ -424,28 +429,28 @@ function Contact() {
               <div className="form-row">
                 <label>
                   First Name
-                  <input name="firstName" required placeholder="First name" />
+                  <input name="firstName" value={values.firstName} onChange={updateValue} required placeholder="First name" />
                 </label>
                 <label>
                   Last Name
-                  <input name="lastName" required placeholder="Last name" />
+                  <input name="lastName" value={values.lastName} onChange={updateValue} required placeholder="Last name" />
                 </label>
               </div>
 
               <div className="form-row">
                 <label>
                   Contact Number
-                  <input name="phone" type="tel" required placeholder="+1 (000) 000-0000" />
+                  <input name="phone" type="tel" value={values.phone} onChange={updateValue} required placeholder="+1 (000) 000-0000" />
                 </label>
                 <label>
                   Email Address
-                  <input name="email" type="email" required placeholder="you@example.com" />
+                  <input name="email" type="email" value={values.email} onChange={updateValue} required placeholder="you@example.com" />
                 </label>
               </div>
 
               <label>
                 Message
-                <textarea name="message" rows="7" required placeholder="How can I help?" />
+                <textarea name="message" value={values.message} onChange={updateValue} rows="7" required placeholder="How can I help?" />
               </label>
 
               <button className="button primary submit-button" type="submit">
@@ -464,11 +469,15 @@ function AuthForm({ mode, onSession }) {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [values, setValues] = useState({ name: '', email: '', password: '' });
   const signup = mode === 'signup';
+
+  function updateValue(event) {
+    setValues((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
 
   async function submit(event) {
     event.preventDefault();
-    const values = Object.fromEntries(new FormData(event.currentTarget));
     setBusy(true);
     setError('');
     try {
@@ -486,9 +495,9 @@ function AuthForm({ mode, onSession }) {
   return <div className="page">
     <PageIntro eyebrow={signup ? 'CREATE ACCOUNT' : 'WELCOME BACK'} title={signup ? 'Join the portfolio.' : 'Sign in.'} text={signup ? 'Create an account to view portfolio content.' : 'Sign in to your portfolio account.'} />
     <form className="contact-form auth-form" onSubmit={submit}>
-      {signup && <label>Name<input name="name" required autoComplete="name" /></label>}
-      <label>Email<input name="email" type="email" required autoComplete="email" /></label>
-      <label>Password<input name="password" type="password" required minLength="6" autoComplete={signup ? 'new-password' : 'current-password'} /></label>
+      {signup && <label>Name<input name="name" value={values.name} onChange={updateValue} required autoComplete="name" /></label>}
+      <label>Email<input name="email" type="email" value={values.email} onChange={updateValue} required autoComplete="email" /></label>
+      <label>Password<input name="password" type="password" value={values.password} onChange={updateValue} required minLength="6" autoComplete={signup ? 'new-password' : 'current-password'} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="button primary" disabled={busy}>{busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}</button>
       <p>{signup ? 'Already have an account?' : 'New here?'} <NavLink to={signup ? '/signin' : '/signup'}>{signup ? 'Sign in' : 'Create an account'}</NavLink></p>
@@ -521,8 +530,7 @@ function AdminDashboard({ session }) {
 
   async function save(event) {
     event.preventDefault();
-    const fields = Object.fromEntries(new FormData(event.currentTarget));
-    const { resource, id } = draft;
+    const { resource, id, ...fields } = draft;
     const body = resource === 'projects' || resource === 'contacts' ? fields : {
       ...fields, firstname: session.user.name.split(' ')[0], lastname: session.user.name.split(' ').slice(1).join(' ') || session.user.name,
       email: session.user.email
@@ -533,35 +541,59 @@ function AdminDashboard({ session }) {
     } catch (err) { setError(err.message); }
   }
 
+  function openDraft(resource, record = {}) {
+    setDraft({
+      resource,
+      id: record._id,
+      title: record.title || '',
+      type: record.type || '',
+      description: record.description || '',
+      role: record.role || '',
+      outcome: record.outcome || '',
+      icon: record.icon || '',
+      completion: record.completion ? new Date(record.completion).toISOString().slice(0, 10) : '',
+      firstname: record.firstname || '',
+      lastname: record.lastname || '',
+      email: record.email || '',
+      phone: record.phone || '',
+      message: record.message || ''
+    });
+    setError('');
+  }
+
+  function updateDraft(event) {
+    setDraft((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
+
   return <div className="page">
     <PageIntro eyebrow="ADMIN" title="Manage portfolio content." text="Create, edit, and remove projects and education records; review contact messages." />
     {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="form-notice">{notice}</p>}
-    <button className="button primary" onClick={() => { setDraft({ resource: 'projects' }); setError(''); }}>Add project</button>{' '}
-    <button className="button secondary" onClick={() => { setDraft({ resource: 'educations' }); setError(''); }}>Add education</button>
+    <button className="button primary" onClick={() => openDraft('projects')}>Add project</button>{' '}
+    <button className="button secondary" onClick={() => openDraft('educations')}>Add education</button>
     {draft && <form className="contact-form admin-form" onSubmit={save}>
       <h2>{draft.id ? 'Edit' : 'New'} {draft.resource === 'projects' ? 'project' : draft.resource === 'contacts' ? 'contact' : 'education'}</h2>
-      {draft.resource !== 'contacts' && <label>Title<input name="title" defaultValue={draft.title || ''} required /></label>}
+      {draft.resource !== 'contacts' && <label>Title<input name="title" value={draft.title} onChange={updateDraft} required /></label>}
       {draft.resource === 'projects' ? <>
-        <label>Type<input name="type" defaultValue={draft.type || ''} /></label>
-        <label>Description<textarea name="description" defaultValue={draft.description || ''} required /></label>
-        <label>My role<input name="role" defaultValue={draft.role || ''} /></label>
-        <label>Outcome<input name="outcome" defaultValue={draft.outcome || ''} /></label>
-        <label>Icon<input name="icon" defaultValue={draft.icon || ''} /></label>
+        <label>Type<input name="type" value={draft.type} onChange={updateDraft} /></label>
+        <label>Description<textarea name="description" value={draft.description} onChange={updateDraft} required /></label>
+        <label>My role<input name="role" value={draft.role} onChange={updateDraft} /></label>
+        <label>Outcome<input name="outcome" value={draft.outcome} onChange={updateDraft} /></label>
+        <label>Icon<input name="icon" value={draft.icon} onChange={updateDraft} /></label>
       </> : draft.resource === 'contacts' ? <>
-        <label>First name<input name="firstname" defaultValue={draft.firstname || ''} required /></label>
-        <label>Last name<input name="lastname" defaultValue={draft.lastname || ''} required /></label>
-        <label>Email<input name="email" type="email" defaultValue={draft.email || ''} required /></label>
-        <label>Phone<input name="phone" defaultValue={draft.phone || ''} /></label>
-        <label>Message<textarea name="message" defaultValue={draft.message || ''} required /></label>
+        <label>First name<input name="firstname" value={draft.firstname} onChange={updateDraft} required /></label>
+        <label>Last name<input name="lastname" value={draft.lastname} onChange={updateDraft} required /></label>
+        <label>Email<input name="email" type="email" value={draft.email} onChange={updateDraft} required /></label>
+        <label>Phone<input name="phone" value={draft.phone} onChange={updateDraft} /></label>
+        <label>Message<textarea name="message" value={draft.message} onChange={updateDraft} required /></label>
       </> : <>
-        <label>Completion date<input name="completion" type="date" defaultValue={draft.completion ? draft.completion.slice(0, 10) : ''} required /></label>
-        <label>Description<textarea name="description" defaultValue={draft.description || ''} required /></label>
+        <label>Completion date<input name="completion" type="date" value={draft.completion} onChange={updateDraft} required /></label>
+        <label>Description<textarea name="description" value={draft.description} onChange={updateDraft} required /></label>
       </>}
       <div className="button-row"><button className="button primary">Save</button><button type="button" className="button secondary" onClick={() => setDraft(null)}>Cancel</button></div>
     </form>}
-    <section className="admin-section"><h2>Projects</h2>{data.projects.map((record) => <AdminRecord key={record._id} record={record} onEdit={() => setDraft({ resource: 'projects', id: record._id, ...record })} onDelete={() => remove('projects', record._id)} />)}</section>
-    <section className="admin-section"><h2>Education</h2>{data.educations.map((record) => <AdminRecord key={record._id} record={record} onEdit={() => setDraft({ resource: 'educations', id: record._id, ...record })} onDelete={() => remove('educations', record._id)} />)}</section>
-    <section className="admin-section"><h2>Contact messages</h2><button className="button secondary" onClick={() => setDraft({ resource: 'contacts' })}>Add contact</button>{data.contacts.map((record) => <article className="admin-record" key={record._id}><div><strong>{record.firstname} {record.lastname}</strong><p>{record.email} · {record.phone}</p><p>{record.message}</p></div><div className="button-row"><button className="button secondary" onClick={() => setDraft({ resource: 'contacts', id: record._id, ...record })}>Edit</button><button className="button secondary" onClick={() => remove('contacts', record._id)}>Delete</button></div></article>)}</section>
+    <section className="admin-section"><h2>Projects</h2>{data.projects.map((record) => <AdminRecord key={record._id} record={record} onEdit={() => openDraft('projects', record)} onDelete={() => remove('projects', record._id)} />)}</section>
+    <section className="admin-section"><h2>Education</h2>{data.educations.map((record) => <AdminRecord key={record._id} record={record} onEdit={() => openDraft('educations', record)} onDelete={() => remove('educations', record._id)} />)}</section>
+    <section className="admin-section"><h2>Contact messages</h2><button className="button secondary" onClick={() => openDraft('contacts')}>Add contact</button>{data.contacts.map((record) => <article className="admin-record" key={record._id}><div><strong>{record.firstname} {record.lastname}</strong><p>{record.email} · {record.phone}</p><p>{record.message}</p></div><div className="button-row"><button className="button secondary" onClick={() => openDraft('contacts', record)}>Edit</button><button className="button secondary" onClick={() => remove('contacts', record._id)}>Delete</button></div></article>)}</section>
   </div>;
 }
 
