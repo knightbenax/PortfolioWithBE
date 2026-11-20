@@ -33,9 +33,17 @@ function App() {
     setSession(nextSession);
   }
 
+  async function signout() {
+    try {
+      if (session?.token) await api('/auth/signout', { method: 'GET', token: session.token });
+    } finally {
+      updateSession(null);
+    }
+  }
+
   return (
     <div className="site-shell">
-      <Header session={session} onSignout={() => updateSession(null)} />
+      <Header session={session} onSignout={signout} />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
