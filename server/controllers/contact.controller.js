@@ -26,17 +26,17 @@ exports.findOne = async (req, res) => {
 // Create a new contact
 exports.create = async (req, res) => {
   try {
-    console.log(req.body);
-    console.log(req);
-
-    if (!req.body.firstname || !req.body.lastname || !req.body.email) {
-      return res.status(400).json({ message: 'First name, last name, and email cannot be empty!' });
+    const { firstname, lastname, email, phone, message } = req.body;
+    if (!firstname || !lastname || !email || !message) {
+      return res.status(400).json({ message: 'First name, last name, email, and message cannot be empty!' });
     }
 
     const contact = new Contact({
-      firstname: req.body.firstname,
-      lastname: req.body.lastname,
-      email: req.body.email
+      firstname,
+      lastname,
+      email,
+      phone,
+      message
     });
 
     const data = await contact.save();

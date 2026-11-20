@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const contacts = require('../controllers/contact.controller');
+const auth = require('../controllers/auth.controller');
 
 // Retrieve all contacts
 router.get('/', contacts.findAll);
@@ -11,12 +12,12 @@ router.get('/:id', contacts.findOne);
 router.post('/', contacts.create);
 
 // Update a contact with id
-router.put('/:id', contacts.update);
+router.put('/:id', auth.requireSignin, auth.requireAdmin, contacts.update);
 
 // Delete a contact with id
-router.delete('/:id', contacts.delete);
+router.delete('/:id', auth.requireSignin, auth.requireAdmin, contacts.delete);
 
 // Delete all contacts
-router.delete('/', contacts.deleteAll);
+router.delete('/', auth.requireSignin, auth.requireAdmin, contacts.deleteAll);
 
 module.exports = router;

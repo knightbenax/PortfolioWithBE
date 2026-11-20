@@ -26,12 +26,12 @@ exports.findOne = async (req, res) => {
 // Create a new project
 exports.create = async (req, res) => {
   try {
-    const { title, firstname, lastname, email, completion, description } = req.body;
-    if (!title || !firstname || !lastname || !email || !completion || !description) {
-      return res.status(400).json({ message: 'All project fields are required!' });
+    const { title, description, type, role, outcome, icon } = req.body;
+    if (!title || !description) {
+      return res.status(400).json({ message: 'Project title and description are required!' });
     }
 
-    const project = new Project({ title, firstname, lastname, email, completion, description });
+    const project = new Project({ title, description, type, role, outcome, icon });
     const data = await project.save();
     res.status(201).json(data);
   } catch (error) {

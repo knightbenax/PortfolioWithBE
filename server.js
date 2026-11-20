@@ -8,12 +8,13 @@ const contactRoutes = require('./server/routes/contact.routes');
 const projectRoutes = require('./server/routes/project.routes');
 const educationRoutes = require('./server/routes/education.routes');
 const userRoutes = require('./server/routes/user.routes');
+const authRoutes = require('./server/routes/auth.route');
 
 // Initialize Express app
 const app = express();
 
 // Middleware setup
-app.use(cors());
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -38,19 +39,19 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the MyPortfolio API server!' });
 });
 
-app.use((err, req, res, next) => {
-  if (err.name === 'UnauthorizedError') {
-    res.status(401).json({ "error": err.name + ": " + err.message });
-  } else if (err) {
-    res.status(400).json({ "error": err.name + ": " + err.message });
-    console.log(err);
-  }
-});
-
 app.use('/api/contacts', contactRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/educations', educationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api', authRoutes);
+
+app.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+  console.error(err);
+  return res.status(500).json({ error: 'An unexpected server error occurred.' });
+});
 
 // Define Port and Start Server
 const PORT = process.env.PORT || 5186;

@@ -1,39 +1,12 @@
-// const router = require('express').Router();
+const router = require('express').Router();
 const users = require('../controllers/user.controller');
+const auth = require('../controllers/auth.controller');
 
-// // Retrieve all users
-// router.get('/', users.findAll);
-
-// // Retrieve a single user with id
-// router.get('/:id', users.findOne);
-
-// // Create a new user
-// router.post('/', users.create);
-
-// // Update a user with id
-// router.put('/:id', users.update);
-
-// // Delete a user with id
-// router.delete('/:id', users.delete);
-
-// // Delete all users
-// router.delete('/', users.deleteAll);
-
-const express = require('express');
-const userCtrl = require('../controllers/user.controller');
-const authCtrl = require('../controllers/auth.controller');
-
-const router = express.Router();
-
-router.route('/api/users')
-  .get(userCtrl.findAll) 
-  .post(userCtrl.create);
-
-router.route('/api/users/:userId')
-  .get(authCtrl.requireSignin, userCtrl.findOne) 
-  .put(authCtrl.requireSignin, authCtrl.hasAuthorization, userCtrl.update)
-  .delete(authCtrl.requireSignin, authCtrl.hasAuthorization, userCtrl.delete); 
-
-router.param('userId', userCtrl.findOne); 
+// Public signup always creates a regular user; clients cannot self-assign admin.
+router.post('/', users.create);
+router.get('/', auth.requireSignin, auth.requireAdmin, users.findAll);
+router.get('/:id', auth.requireSignin, users.findOne);
+router.put('/:id', auth.requireSignin, users.update);
+router.delete('/:id', auth.requireSignin, auth.requireAdmin, users.delete);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const projects = require('../controllers/project.controller');
+const auth = require('../controllers/auth.controller');
 
 // Retrieve all projects
 router.get('/', projects.findAll);
@@ -8,15 +9,15 @@ router.get('/', projects.findAll);
 router.get('/:id', projects.findOne);
 
 // Create a new project
-router.post('/', projects.create);
+router.post('/', auth.requireSignin, auth.requireAdmin, projects.create);
 
 // Update a project with id
-router.put('/:id', projects.update);
+router.put('/:id', auth.requireSignin, auth.requireAdmin, projects.update);
 
 // Delete a project with id
-router.delete('/:id', projects.delete);
+router.delete('/:id', auth.requireSignin, auth.requireAdmin, projects.delete);
 
 // Delete all projects
-router.delete('/', projects.deleteAll);
+router.delete('/', auth.requireSignin, auth.requireAdmin, projects.deleteAll);
 
 module.exports = router;

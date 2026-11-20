@@ -1,13 +1,11 @@
+const env = process.env.NODE_ENV || 'development';
 const config = {
-    env: process.env.NODE_ENV || 'development', 
-    port: process.env.PORT || 3000,
-    jwtSecret: process.env.JWT_SECRET || "aET4G5vcKjSouMiqmZlUmfVvHBQt1EL8ST2xSSlM2Iy", 
-    MONGODB_URI: process.env.MONGODB_URI ||"mongodb+srv://knightbenax_db_user:ex1V3nQnpWujYY76@comp229db.ruguvvo.mongodb.net/"||
-    process.env.MONGO_HOST ||
-    'mongodb://' + (process.env.IP || 'localhost') + ':' + 
-   (process.env.MONGO_PORT || '27017') +
-    '/mernproject' 
-    };
+  env,
+  port: process.env.PORT || 5186,
+  jwtSecret: process.env.JWT_SECRET || (env === 'production' ? undefined : 'local-development-secret-change-before-deploy'),
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/portfolio'
+};
+
+if (!config.jwtSecret) throw new Error('JWT_SECRET must be configured in production.');
 
 module.exports = config;
-   

@@ -3,7 +3,7 @@ const User = require('../models/user.model');
 // Get all users
 exports.findAll = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select('-hashed_password -salt');
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: error.message || 'Some error occurred while retrieving users.' });
@@ -13,7 +13,7 @@ exports.findAll = async (req, res) => {
 // Get a single user by ID
 exports.findOne = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id).select('-hashed_password -salt');
     if (!user) {
       return res.status(404).json({ message: `User not found with id ${req.params.id}` });
     }
@@ -31,9 +31,9 @@ exports.create = async (req, res) => {
       return res.status(400).json({ message: 'Name, email, and password cannot be empty!' });
     }
 
-    const user = new User({ name, email, password });
+    const user = new User({ name, email, password, role: 'user' });
     const data = await user.save();
-    res.status(201).json(data);
+    res.status(201).json({ _id: data._id, name: data.name, email: data.email, role: data.role });
   } catch (error) {
     res.status(500).json({ message: error.message || 'Some error occurred while creating the user.' });
   }
@@ -43,9 +43,12 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const id = req.params.id;
-    req.body.updated = Date.now(); // Update timestamp manually if needed
+    if (String(req.auth._id) !== id && req.auth.role !== 'admin') {
+      return res.status(403).json({ error: 'You may only update your own account.' });
+    }
+    const updates = { name: req.body.name, email: req.body.email, updated: Date.now() };
     
-    const data = await User.findByIdAndUpdate(id, req.body, { useFindAndModify: false, new: true });
+    const data = await User.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).select('-hashed_password -salt');
     
     if (!data) {
       return res.status(404).json({ message: `Cannot update user with id=${id}. User was not found!` });

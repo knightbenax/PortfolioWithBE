@@ -14,16 +14,17 @@ const signin = async (req, res) => {
       return res.status(401).send({ error: "Email and password don't match." });
     }
 
-    const token = jwt.sign({ _id: user._id }, config.jwtSecret);
+    const token = jwt.sign({ _id: user._id, role: user.role }, config.jwtSecret, { expiresIn: '7d' });
 
-    res.cookie('t', token, { expire: new Date() + 9999 });
+    res.cookie('t', token, { httpOnly: true, sameSite: 'lax', secure: config.env === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
     return res.json({
       token,
       user: {
         _id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     });
   } catch (err) {
@@ -52,9 +53,15 @@ const hasAuthorization = (req, res, next) => {
   next();
 };
 
+const requireAdmin = (req, res, next) => {
+  if (req.auth && req.auth.role === 'admin') return next();
+  return res.status(403).json({ error: 'Admin access required.' });
+};
+
 module.exports = {
   signin,
   signout,
   requireSignin,
-  hasAuthorization
+  hasAuthorization,
+  requireAdmin
 };
