@@ -1,38 +1,6 @@
-import { useState } from "react";
-import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-
-const projects = [
-  {
-    title: "Blark",
-    type: "iOS Application",
-    description:
-      "A monochrome camera experience designed around black-and-white photography, custom film looks, RAW/DNG capture and a focused shooting workflow.",
-    role: "Product design, iOS development and product direction.",
-    outcome:
-      "Built and published as a real iOS product with camera, editing and Apple platform integrations.",
-    icon: "B"
-  },
-  {
-    title: "Plomer",
-    type: "Web & Apple Platform Application",
-    description:
-      "A website monitoring product for tracking uptime, SSL expiry, domain expiry, content changes and infrastructure alerts.",
-    role: "Product architecture, interface design and software development.",
-    outcome:
-      "Created a monitoring workflow that gives users a single place to understand website status and incidents.",
-    icon: "P"
-  },
-  {
-    title: "Litur",
-    type: "Color Library and picker app",
-    description:
-      "A color picker app that allows you pick and save colors. Also comes with Color Intelligence backed by Apple Foundation Models that allow you ask Litur for color tips, suggestions and palettes",
-    role: "Product design, iOS development and product direction.",
-    outcome:
-      "Built and published as a real iOS app",
-    icon: "L"
-  }
-];
+import { useEffect, useState } from "react";
+import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { api, getSession, saveSession } from "./api";
 
 const services = [
   {
@@ -58,17 +26,27 @@ const services = [
 ];
 
 function App() {
+  const [session, setSession] = useState(() => getSession());
+
+  function updateSession(nextSession) {
+    saveSession(nextSession);
+    setSession(nextSession);
+  }
+
   return (
     <div className="site-shell">
-      <Header />
+      <Header session={session} onSignout={() => updateSession(null)} />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/projects" element={<Projects />} />
-          <Route path="/education" element={<Education />} />
+          <Route path="/education" element={<Education session={session} />} />
           <Route path="/services" element={<Services />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/signin" element={<AuthForm mode="signin" onSession={updateSession} />} />
+          <Route path="/signup" element={<AuthForm mode="signup" onSession={updateSession} />} />
+          <Route path="/admin" element={<AdminDashboard session={session} />} />
         </Routes>
       </main>
       <Footer />
@@ -76,7 +54,7 @@ function App() {
   );
 }
 
-function Header() {
+function Header({ session, onSignout }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const links = [
@@ -85,7 +63,8 @@ function Header() {
     ["Projects", "/projects"],
     ["Education", "/education"],
     ["Services", "/services"],
-    ["Contact Me", "/contact"]
+    ["Contact Me", "/contact"],
+    ...(session?.user?.role === 'admin' ? [["Manage", "/admin"]] : [])
   ];
 
   return (
@@ -116,6 +95,7 @@ function Header() {
               {label}
             </NavLink>
           ))}
+          {session ? <button className="nav-action" onClick={onSignout}>Sign out</button> : <NavLink to="/signin" onClick={() => setMenuOpen(false)}>Sign in</NavLink>}
         </nav>
       </div>
     </header>
@@ -242,6 +222,13 @@ function About() {
 }
 
 function Projects() {
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api('/projects').then(setItems).catch((err) => setError(err.message)).finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="page">
       <PageIntro
@@ -251,7 +238,10 @@ function Projects() {
       />
 
       <section className="project-list section">
-        {projects.map((project, index) => (
+        {loading && <p>Loading projects…</p>}
+        {error && <p className="form-error">{error}</p>}
+        {!loading && !error && items.length === 0 && <p>No projects have been published yet.</p>}
+        {items.map((project, index) => (
           <article className="project-card" key={project.title}>
             <div className="project-visual" aria-label={`${project.title} project graphic`}>
               <div className="project-number">0{index + 1}</div>
@@ -260,18 +250,18 @@ function Projects() {
             </div>
 
             <div className="project-content">
-              <p className="project-type">{project.type}</p>
+              <p className="project-type">{project.type || 'Project'}</p>
               <h2>{project.title}</h2>
               <p>{project.description}</p>
 
               <div className="project-details">
                 <div>
                   <strong>My Role</strong>
-                  <span>{project.role}</span>
+                  <span>{project.role || '—'}</span>
                 </div>
                 <div>
                   <strong>Outcome</strong>
-                  <span>{project.outcome}</span>
+                  <span>{project.outcome || project.description}</span>
                 </div>
               </div>
             </div>
@@ -282,7 +272,14 @@ function Projects() {
   );
 }
 
-function Education() {
+function Education({ session }) {
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api('/educations').then(setItems).catch((err) => setError(err.message)).finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="page">
       <PageIntro
@@ -292,31 +289,19 @@ function Education() {
       />
 
       <section className="timeline section">
-        <div className="timeline-item">
+        {loading && <p>Loading education…</p>}
+        {error && <p className="form-error">{error}</p>}
+        {!loading && !error && items.length === 0 && <p>No education records have been published yet.</p>}
+        {items.map((education) => <article className="timeline-item" key={education._id}>
           <span className="timeline-dot" />
           <div>
-            <p className="timeline-date">CURRENT</p>
-            <h2>Diploma / Degree Information</h2>
-            <p>
-              Software Eng. with Artifical Intelligence (Co-OP): 2026
-            </p>
+            <p className="timeline-date">{education.completion ? new Date(education.completion).getFullYear() : 'EDUCATION'}</p>
+            <h2>{education.title}</h2>
+            <p>{education.description}</p>
           </div>
-        </div>
-
-        <div className="timeline-item">
-          <span className="timeline-dot" />
-          <div>
-            <p className="timeline-date">2012 - 2017</p>
-            <h2>Previous Education</h2>
-            <p>
-              Computer Science - University of Ibadan, Nigeria
-            </p>
-            <p>
-              High School - King's College, Lagos
-            </p>
-          </div>
-        </div>
+        </article>)}
       </section>
+      {session?.user?.role === 'admin' && <p className="admin-hint">Manage education records from the <NavLink to="/admin">admin page</NavLink>.</p>}
     </div>
   );
 }
@@ -357,10 +342,25 @@ function Services() {
 function Contact() {
   const navigate = useNavigate();
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    setSubmitted(true);
+    const form = new FormData(event.currentTarget);
+    setSending(true);
+    setError('');
+    try {
+      await api('/contacts', { method: 'POST', body: {
+        firstname: form.get('firstName'), lastname: form.get('lastName'),
+        phone: form.get('phone'), email: form.get('email'), message: form.get('message')
+      }});
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
   }
 
   function resetForm() {
@@ -440,14 +440,124 @@ function Contact() {
               </label>
 
               <button className="button primary submit-button" type="submit">
-                Send Message →
+                {sending ? 'Sending…' : 'Send Message →'}
               </button>
+              {error && <p className="form-error" role="alert">{error}</p>}
             </form>
           )}
         </div>
       </section>
     </div>
   );
+}
+
+function AuthForm({ mode, onSession }) {
+  const navigate = useNavigate();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const signup = mode === 'signup';
+
+  async function submit(event) {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(event.currentTarget));
+    setBusy(true);
+    setError('');
+    try {
+      if (signup) await api('/users', { method: 'POST', body: values });
+      const result = await api('/auth/signin', { method: 'POST', body: { email: values.email, password: values.password } });
+      onSession(result);
+      navigate(result.user.role === 'admin' ? '/admin' : '/');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div className="page">
+    <PageIntro eyebrow={signup ? 'CREATE ACCOUNT' : 'WELCOME BACK'} title={signup ? 'Join the portfolio.' : 'Sign in.'} text={signup ? 'Create an account to view portfolio content.' : 'Sign in to your portfolio account.'} />
+    <form className="contact-form auth-form" onSubmit={submit}>
+      {signup && <label>Name<input name="name" required autoComplete="name" /></label>}
+      <label>Email<input name="email" type="email" required autoComplete="email" /></label>
+      <label>Password<input name="password" type="password" required minLength="6" autoComplete={signup ? 'new-password' : 'current-password'} /></label>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <button className="button primary" disabled={busy}>{busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}</button>
+      <p>{signup ? 'Already have an account?' : 'New here?'} <NavLink to={signup ? '/signin' : '/signup'}>{signup ? 'Sign in' : 'Create an account'}</NavLink></p>
+    </form>
+  </div>;
+}
+
+function AdminDashboard({ session }) {
+  const [data, setData] = useState({ projects: [], educations: [], contacts: [] });
+  const [draft, setDraft] = useState(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [refresh, setRefresh] = useState(0);
+  const token = session?.token;
+  const admin = session?.user?.role === 'admin';
+
+  useEffect(() => {
+    if (!admin) return;
+    Promise.all([api('/projects'), api('/educations'), api('/contacts')])
+      .then(([projectsData, educationsData, contactsData]) => setData({ projects: projectsData, educations: educationsData, contacts: contactsData }))
+      .catch((err) => setError(err.message));
+  }, [admin, refresh]);
+
+  if (!admin) return <div className="page"><PageIntro eyebrow="ADMIN" title="Admin access required." text="Sign in with an administrator account to manage portfolio records." /><NavLink className="button primary" to="/signin">Sign in</NavLink></div>;
+
+  async function remove(resource, id) {
+    try { await api(`/${resource}/${id}`, { method: 'DELETE', token }); setRefresh((value) => value + 1); setNotice('Record deleted.'); setError(''); }
+    catch (err) { setError(err.message); }
+  }
+
+  async function save(event) {
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget));
+    const { resource, id } = draft;
+    const body = resource === 'projects' || resource === 'contacts' ? fields : {
+      ...fields, firstname: session.user.name.split(' ')[0], lastname: session.user.name.split(' ').slice(1).join(' ') || session.user.name,
+      email: session.user.email
+    };
+    try {
+      await api(`/${resource}${id ? `/${id}` : ''}`, { method: id ? 'PUT' : 'POST', body, token });
+      setDraft(null); setRefresh((value) => value + 1); setNotice('Record saved.'); setError('');
+    } catch (err) { setError(err.message); }
+  }
+
+  return <div className="page">
+    <PageIntro eyebrow="ADMIN" title="Manage portfolio content." text="Create, edit, and remove projects and education records; review contact messages." />
+    {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="form-notice">{notice}</p>}
+    <button className="button primary" onClick={() => { setDraft({ resource: 'projects' }); setError(''); }}>Add project</button>{' '}
+    <button className="button secondary" onClick={() => { setDraft({ resource: 'educations' }); setError(''); }}>Add education</button>
+    {draft && <form className="contact-form admin-form" onSubmit={save}>
+      <h2>{draft.id ? 'Edit' : 'New'} {draft.resource === 'projects' ? 'project' : draft.resource === 'contacts' ? 'contact' : 'education'}</h2>
+      {draft.resource !== 'contacts' && <label>Title<input name="title" defaultValue={draft.title || ''} required /></label>}
+      {draft.resource === 'projects' ? <>
+        <label>Type<input name="type" defaultValue={draft.type || ''} /></label>
+        <label>Description<textarea name="description" defaultValue={draft.description || ''} required /></label>
+        <label>My role<input name="role" defaultValue={draft.role || ''} /></label>
+        <label>Outcome<input name="outcome" defaultValue={draft.outcome || ''} /></label>
+        <label>Icon<input name="icon" defaultValue={draft.icon || ''} /></label>
+      </> : draft.resource === 'contacts' ? <>
+        <label>First name<input name="firstname" defaultValue={draft.firstname || ''} required /></label>
+        <label>Last name<input name="lastname" defaultValue={draft.lastname || ''} required /></label>
+        <label>Email<input name="email" type="email" defaultValue={draft.email || ''} required /></label>
+        <label>Phone<input name="phone" defaultValue={draft.phone || ''} /></label>
+        <label>Message<textarea name="message" defaultValue={draft.message || ''} required /></label>
+      </> : <>
+        <label>Completion date<input name="completion" type="date" defaultValue={draft.completion ? draft.completion.slice(0, 10) : ''} required /></label>
+        <label>Description<textarea name="description" defaultValue={draft.description || ''} required /></label>
+      </>}
+      <div className="button-row"><button className="button primary">Save</button><button type="button" className="button secondary" onClick={() => setDraft(null)}>Cancel</button></div>
+    </form>}
+    <section className="admin-section"><h2>Projects</h2>{data.projects.map((record) => <AdminRecord key={record._id} record={record} onEdit={() => setDraft({ resource: 'projects', id: record._id, ...record })} onDelete={() => remove('projects', record._id)} />)}</section>
+    <section className="admin-section"><h2>Education</h2>{data.educations.map((record) => <AdminRecord key={record._id} record={record} onEdit={() => setDraft({ resource: 'educations', id: record._id, ...record })} onDelete={() => remove('educations', record._id)} />)}</section>
+    <section className="admin-section"><h2>Contact messages</h2><button className="button secondary" onClick={() => setDraft({ resource: 'contacts' })}>Add contact</button>{data.contacts.map((record) => <article className="admin-record" key={record._id}><div><strong>{record.firstname} {record.lastname}</strong><p>{record.email} · {record.phone}</p><p>{record.message}</p></div><div className="button-row"><button className="button secondary" onClick={() => setDraft({ resource: 'contacts', id: record._id, ...record })}>Edit</button><button className="button secondary" onClick={() => remove('contacts', record._id)}>Delete</button></div></article>)}</section>
+  </div>;
+}
+
+function AdminRecord({ record, onEdit, onDelete }) {
+  return <article className="admin-record"><div><strong>{record.title}</strong><p>{record.description}</p></div><div className="button-row"><button className="button secondary" onClick={onEdit}>Edit</button><button className="button secondary" onClick={onDelete}>Delete</button></div></article>;
 }
 
 function Footer() {
