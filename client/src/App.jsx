@@ -36,9 +36,10 @@ function App() {
   async function signout() {
     try {
       if (session?.token) await api('/auth/signout', { method: 'GET', token: session.token });
-    } finally {
-      updateSession(null);
+    } catch (error) {
+      console.warn('Could not notify the server about signout:', error.message);
     }
+    updateSession(null);
   }
 
   return (
