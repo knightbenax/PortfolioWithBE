@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 const config = require("./config/config.js")
 
 // Import route files
@@ -34,16 +35,20 @@ mongoose.connect(MONGODB_URI, {
   process.exit(1);
 });
 
-// Root Endpoint
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the MyPortfolio API server!' });
-});
-
 app.use('/api/contacts', contactRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/educations', educationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', authRoutes);
+
+// Serve the Vite production build from the same origin as the API.
+const clientBuildPath = path.join(__dirname, 'client', 'dist');
+app.use(express.static(clientBuildPath));
+app.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
+  res.sendFile(path.join(clientBuildPath, 'index.html'), (error) => {
+    if (error) next(error);
+  });
+});
 
 app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {
