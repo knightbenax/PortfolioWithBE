@@ -1,4 +1,12 @@
+const path = require('path');
 const mongoose = require('mongoose');
+
+try {
+  process.loadEnvFile(path.resolve(__dirname, '../../.env'));
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
+
 const config = require('../../config/config');
 const User = require('../models/user.model');
 
