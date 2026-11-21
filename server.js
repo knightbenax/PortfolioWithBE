@@ -24,8 +24,8 @@ const MONGODB_URI = config.MONGODB_URI; // || 'mongodb://127.0.0.1:27017/Portfol
 
 // Connect to MongoDB using Mongoose
 mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+  // useNewUrlParser: true,
+  // useUnifiedTopology: true,
 })
 .then(() => {
   console.log('Successfully connected to MongoDB database: Portfolio');
